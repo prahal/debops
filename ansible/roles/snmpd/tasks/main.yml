@@ -131,6 +131,75 @@
   no_log: '{{ debops__no_log | d(True) }}'
   when: snmpd_account is defined and snmpd_account is truthy
 
+- name: Check agent account exists
+  ansible.builtin.shell: set -o nounset -o pipefail -o errexit &&
+            grep -q '^usmUser\s.\+{{ snmpd_account_agent_username }}' '/var/lib/snmp/snmpd.conf'
+  args:
+    executable: '/bin/bash'
+  register: snmpd__register_account_agent_exists
+  changed_when: False
+  failed_when: False
+  check_mode: False
+
+- name: Check agent account has read access
+  ansible.builtin.shell: set -o nounset -o pipefail -o errexit &&
+            grep -q '^rouser\s\+{{ snmpd_account_agent_username }}\s\+priv' '/etc/snmp/snmpd.conf'
+  args:
+    executable: '/bin/bash'
+  register: snmpd__register_account_agent_hasraccess
+  changed_when: False
+  failed_when: False
+  check_mode: False
+
+- name: Get Host active snmpd accounts
+  ansible.builtin.command: snmpwalk -u {{ snmpd_fact_account_agent_username }} -l authPriv -a SHA -x AES
+           -A "{{ snmpd_fact_account_agent_password }}"
+           -X "{{ snmpd_fact_account_agent_password }}" localhost
+           -OevQ .1.3.6.1.6.3.15.1.2.2.1.3
+  register: snmpd__register_active_snmpusers
+  changed_when: False
+  failed_when: False
+  check_mode: False
+  when: (snmpd__register_account_agent_exists | d() and snmpd__register_account_agent_exists.rc == 0) and
+        (snmpd__register_account_agent_hasraccess | d() and snmpd__register_account_agent_hasraccess.rc == 0)
+
+- name: Check admin account active
+  ansible.builtin.command: test "True" =  '{{
+    snmpd__register_active_snmpusers | d()  and (snmpd_fact_account_admin_username in (snmpd__register_active_snmpusers.stdout_lines)) | bool }}'
+  register: snmpd__register_admin_active
+  changed_when: False
+  failed_when: False
+  check_mode: False
+  when: (snmpd__register_active_snmpusers | d() and  snmpd__register_active_snmpusers.rc | d(1) == 0)
+
+- name: Check agent account active
+  ansible.builtin.command: test "True" =  '{{
+    snmpd__register_active_snmpusers | d()  and (snmpd_fact_account_agent_username in (snmpd__register_active_snmpusers.stdout_lines)) | bool }}'
+  register: snmpd__register_agent_active
+  changed_when: False
+  failed_when: False
+  check_mode: False
+  when: (snmpd__register_active_snmpusers | d() and  snmpd__register_active_snmpusers.rc | d(1) == 0)
+
+- name: Check local account active
+  ansible.builtin.command: test "True" =  '{{
+    snmpd__register_active_snmpusers | d()  and (snmpd_account_local_username in (snmpd__register_active_snmpusers.stdout_lines)) | bool }}'
+  register: snmpd__register_local_active
+  changed_when: False
+  failed_when: False
+  check_mode: False
+  when: (snmpd__register_active_snmpusers | d() and  snmpd__register_active_snmpusers.rc | d(1) == 0)
+
+- name: Check for broken accounts setup
+  ansible.builtin.command: test "True" = '{{
+        (snmpd__register_admin_active.rc | d(1) == 0) and
+        (snmpd__register_agent_active.rc | d(1) == 0) and
+        (snmpd__register_local_active.rc | d(1) == 0) | bool }}'
+  register: snmpd__register_snmpusers_setupok
+  changed_when: False
+  failed_when: False
+  check_mode: False
+
 - name: Configure snmpd service
   ansible.builtin.template:
     src: '{{ lookup("debops.debops.template_src", "etc/snmp/snmpd.conf.j2") }}'
@@ -142,7 +211,8 @@
 
 - name: Configure SNMPv3 credentials
   ansible.builtin.include_tasks: configure_snmpv3_credentials.yml
-  when: ((snmpd_register_version is defined and not snmpd_register_version.stdout) and
+  when: (((snmpd_register_version is defined and not snmpd_register_version.stdout) or
+         (snmpd__register_snmpusers_setupok is defined and snmpd__register_snmpusers_setupok.rc != 0)) and
          (snmpd_account is defined and snmpd_account is truthy))
 
 - name: Save local SNMPv3 password for retrieval via Ansible facts

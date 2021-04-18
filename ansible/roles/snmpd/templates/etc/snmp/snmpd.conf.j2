@@ -13,7 +13,9 @@ sysContact    {{ snmpd_sys_contact }}
 sysServices   72
 
 {% if snmpd_account | d() and snmpd_account %}
-{% if snmpd_register_version | d() and not snmpd_register_version.stdout %}
+{% if (snmpd_register_version | d() and not snmpd_register_version.stdout)
+      or (snmpd__register_snmpusers_setupok | d() and snmpd__register_snmpusers_setupok.rc != 0)
+ %}
 rwuser        {{ snmpd_account_admin_username }}   priv
 {% endif %}
 rouser        {{ snmpd_account_agent_username }}   priv
