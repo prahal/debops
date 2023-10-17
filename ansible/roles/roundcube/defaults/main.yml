@@ -141,7 +141,7 @@ roundcube__git_gpg_key: '4295 5C9D 6F2A CA9D 3E96  D55F 3E54 28D0 262C 54F8'
 # be needed if multiple people/organizations sign :command:`git` commits or
 # tags in the Roundcube repository, or installation from a private repository
 # is used instead of a public one.
-roundcube__git_additional_gpg_keys: []
+roundcube__git_additional_gpg_keys: [ 'BB22 EF71 9C96 A86E EF4C  DAD1 BEE6 74A0 1935 9DC1' ]
 
                                                                    # ]]]
 # .. envvar:: roundcube__git_repo [[[
@@ -164,7 +164,7 @@ roundcube__git_dir: '{{ roundcube__src + "/"
 # .. envvar:: roundcube__git_version [[[
 #
 # Roundcube release tag to deploy.
-roundcube__git_version: '1.6.0'
+roundcube__git_version: '1.6.4'
 
                                                                    # ]]]
 # .. envvar:: roundcube__git_dest [[[
