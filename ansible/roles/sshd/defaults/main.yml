@@ -1270,6 +1270,14 @@ sshd__pam_access__dependent_rules:
         users: 'root'
         origins: '.{{ ansible_domain }}'
 
+      - name: 'allow-root-avahi-domain'
+        comment: 'Grant access via SSH to root account on the avahi domain (by default "local").'
+        permission: 'allow'
+        users: 'root'
+        origins: '.{{ avahi__domain }}'
+        state: '{{ "present"
+                   if (avahi__enabled | d() | bool) else "absent" }}'
+
       - name: 'deny-root'
         comment: 'Deny access to root account via SSH from anywhere else'
         permission: 'deny'
@@ -1301,6 +1309,17 @@ sshd__pam_access__dependent_rules:
         permission: 'allow'
         users: 'ALL'
         origins: '.{{ ansible_domain }}'
+
+      - name: 'allow-avahi-domain'
+        comment: |
+          Grant access via SSH to users on the avahi domain (by default 'local').
+          The SSH serverneeds to have UseDNS option enabled for this rule to work
+          correctly.
+        permission: 'allow'
+        users: 'ALL'
+        origins: '.{{ avahi__domain }}'
+        state: '{{ "present"
+                   if (avahi__enabled | d() | bool) else "absent" }}'
 
       - name: 'deny-all'
         comment: 'Deny access via SSH by anyone from anywhere'
