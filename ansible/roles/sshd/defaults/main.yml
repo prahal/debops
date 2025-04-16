@@ -1278,6 +1278,12 @@ sshd__pam_access__dependent_rules:
         state: '{{ "present"
                    if (avahi__enabled | d() | bool) else "absent" }}'
 
+      - name: 'allow-root-network'
+        comment: 'Grant access via SSH to root account on the network via IP'
+        permission: 'allow'
+        users: 'root'
+        origins: '{{ ansible_default_ipv4.network + "/" + ansible_default_ipv4.prefix }}'
+
       - name: 'deny-root'
         comment: 'Deny access to root account via SSH from anywhere else'
         permission: 'deny'
@@ -1320,6 +1326,13 @@ sshd__pam_access__dependent_rules:
         origins: '.{{ avahi__domain }}'
         state: '{{ "present"
                    if (avahi__enabled | d() | bool) else "absent" }}'
+
+      - name: 'allow-network'
+        comment: |
+          Grant access via SSH to users on the network via IP.
+        permission: 'allow'
+        users: 'ALL'
+        origins: '{{ ansible_default_ipv4.network + "/" + ansible_default_ipv4.prefix }}'
 
       - name: 'deny-all'
         comment: 'Deny access via SSH by anyone from anywhere'
