@@ -17,8 +17,9 @@
     path: '/etc/systemd/resolved.conf.d'
     state: 'directory'
     mode: '0755'
-  when: (ansible_service_mgr == 'systemd' and
-         (ansible_local.resolved.installed | d()) | bool)
+  when: (avahi__enabled | bool and
+         (ansible_service_mgr == 'systemd' and
+         (ansible_local.resolved.installed | d()) | bool))
 
 - name: Disable MulticastDNS support in systemd-resolved
   ansible.builtin.template:
@@ -26,8 +27,9 @@
     dest: '/etc/systemd/resolved.conf.d/avahi-mdns.conf'
     mode: '0644'
   notify: [ 'Restart systemd-resolved service' ]
-  when: (ansible_service_mgr == 'systemd' and
-         (ansible_local.resolved.installed | d()) | bool)
+  when: (avahi__enabled | bool and
+         (ansible_service_mgr == 'systemd' and
+         (ansible_local.resolved.installed | d()) | bool))
 
 - name: Flush handlers when needed
   ansible.builtin.meta: 'flush_handlers'
@@ -39,6 +41,7 @@
     owner: 'root'
     group: 'root'
     mode: '0755'
+  when: avahi__enabled | bool
 
 - name: Divert the avahi-daemon configuration
   debops.debops.dpkg_divert:
@@ -46,6 +49,7 @@
   loop:
     - 'avahi-daemon.conf'
     - 'hosts'
+  when: avahi__enabled | bool and ansible_pkg_mgr == 'apt'
   register: avahi__register_divert
   notify: [ 'Restart avahi-daemon' ]
 
@@ -56,6 +60,7 @@
     owner: 'root'
     group: 'root'
     mode: '0644'
+  when: avahi__enabled | bool
   notify: [ 'Restart avahi-daemon' ]
 
 - name: Create a stub mDNS hosts configuration file
@@ -65,7 +70,7 @@
     owner: 'root'
     group: 'root'
     mode: '0644'
-  when: avahi__register_divert is changed
+  when: avahi__enabled | bool and avahi__register_divert is changed
 
 - name: Create avahi-daemon systemd override directory
   ansible.builtin.file:
@@ -74,9 +79,10 @@
     owner: 'root'
     group: 'root'
     mode: '0755'
-  when: ansible_service_mgr == 'systemd' and
-        ansible_virtualization_type in ['lxc', 'docker'] and
-        ansible_virtualization_role == 'guest'
+  when: (avahi__enabled | bool and
+         (ansible_service_mgr == 'systemd' and
+         ansible_virtualization_type in ['lxc', 'docker'] and
+         ansible_virtualization_role == 'guest'))
 
 - name: Install avahi-daemon exec override on LXC guests
   ansible.builtin.template:
@@ -85,9 +91,10 @@
     owner: 'root'
     group: 'root'
     mode: '0644'
-  when: ansible_service_mgr == 'systemd' and
-        ansible_virtualization_type in ['lxc', 'docker'] and
-        ansible_virtualization_role == 'guest'
+  when: (avahi__enabled | bool and
+         (ansible_service_mgr == 'systemd' and
+         ansible_virtualization_type in ['lxc', 'docker'] and
+         ansible_virtualization_role == 'guest'))
 
 # The rest of the role continues as normal.
 
@@ -96,6 +103,7 @@
     name: '{{ q("flattened", (avahi__base_packages
                               + avahi__packages)) }}'
     state: 'present'
+  when: avahi__enabled | bool
   register: avahi__register_packages
   until: avahi__register_packages is succeeded
 
@@ -109,11 +117,12 @@
     state: 'present'
     mode: '0644'
   with_dict: '{{ avahi__hosts | combine(avahi__group_hosts) | combine(avahi__host_hosts) }}'
-  when: item.key is defined and item.key is truthy and item.value is defined and item.value is truthy
+  when: (avahi__enabled | bool and
+         (item.key is defined and item.key is truthy and item.value is defined and item.value is truthy)
 
 - name: Configure Avahi CNAME aliases
   ansible.builtin.include_tasks: avahi_alias.yml
-  when: avahi__alias_enabled | bool
+  when: avahi__enabled | bool and avahi__alias_enabled | bool
   tags: [ 'role::avahi:alias' ]
 
 - name: Remove Avahi services if requested
@@ -121,7 +130,8 @@
     path: '/etc/avahi/services/{{ item.value.filename | d(item.key) }}.service'
     state: 'absent'
   with_dict: '{{ avahi__combined_services }}'
-  when: item.value.filename | d(item.key) and item.value.state | d('present') == 'absent'
+  when: (avahi__enabled | bool and
+         (item.value.filename | d(item.key) and item.value.state | d('present') == 'absent'))
   tags: [ 'role::avahi:alias', 'role::avahi:services' ]
 
 - name: Configure Avahi services
@@ -132,9 +142,10 @@
     group: 'root'
     mode: '0644'
   with_dict: '{{ avahi__combined_services }}'
-  when: (item.value.filename | d(item.key) and item.value.state | d('present') != 'absent' and
+  when: (avahi__enabled | bool and
+         (item.value.filename | d(item.key) and item.value.state | d('present') != 'absent' and
          ((item.value.services is defined and item.value.services is truthy) or
-          (item.value.type is defined and item.value.type is truthy)))
+          (item.value.type is defined and item.value.type is truthy))))
   tags: [ 'role::avahi:alias', 'role::avahi:services' ]
 
 - name: Ensure that the avahi-daemon service in in the desired state
@@ -142,6 +153,7 @@
     name: 'avahi-daemon'
     enabled: '{{ avahi__enabled | bool }}'
     state: '{{ "started" if (avahi__enabled | bool) else "stopped" }}'
+  when: avahi__enabled | bool
 
 - name: Make sure that Ansible local facts directory exists
   ansible.builtin.file:
