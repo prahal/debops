@@ -1284,6 +1284,12 @@ sshd__pam_access__dependent_rules:
         users: 'root'
         origins: '{{ ansible_default_ipv4.network + "/" + ansible_default_ipv4.prefix }}'
 
+      - name: 'allow-root-link-local-ipv6-network'
+        comment: 'Grant access via SSH to root account on the network via IP'
+        permission: 'allow'
+        users: 'root'
+        origins: 'fe80::/64'
+
       - name: 'deny-root'
         comment: 'Deny access to root account via SSH from anywhere else'
         permission: 'deny'
@@ -1333,6 +1339,13 @@ sshd__pam_access__dependent_rules:
         permission: 'allow'
         users: 'ALL'
         origins: '{{ ansible_default_ipv4.network + "/" + ansible_default_ipv4.prefix }}'
+
+      - name: 'allow-link-local-ipv6-network'
+        comment: |
+          Grant access via SSH to users on the network via IP.
+        permission: 'allow'
+        users: 'ALL'
+        origins: 'fe80::/64'
 
       - name: 'deny-all'
         comment: 'Deny access via SSH by anyone from anywhere'
