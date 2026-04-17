@@ -92,7 +92,7 @@ dovecot__mail_location: '{{ dovecot__mail_driver ~ ":" ~ dovecot__mail_path }}'
 # .. envvar:: dovecot__quota_default [[[
 #
 # Default quota in bytes (if enabled).
-dovecot__quota_default: '{{ 10 * 1024 * 1024 }}'
+dovecot__quota_default: '{{ 1 * 1024 * 1024 * 1024 }}'
 
                                                                    # ]]]
 # .. envvar:: dovecot__auth_default_realm [[[
