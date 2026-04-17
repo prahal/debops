@@ -325,6 +325,7 @@
                  else False }}'
     masked: False
     daemon_reload: '{{ dovecot__register_systemd_unit_file is changed }}'
+  failed_when: False
   tags: [ 'role::dovecot:sync' ]
 
 - name: Post hooks
