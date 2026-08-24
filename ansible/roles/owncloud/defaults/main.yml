@@ -2258,7 +2258,7 @@ owncloud__nginx__dependent_servers:
           try_files $uri $uri/ =404;
         enabled: '{{ not (owncloud__http_psk_subpath_enabled | bool) }}'
 
-      - pattern: '~ ^/{{ owncloud__http_psk_subpath_end_slash }}(?:build|tests|config|lib|3rdparty|templates|data)\/'
+      - pattern: '~ ^/{{ owncloud__http_psk_subpath_end_slash }}(?:build|tests|config|lib|3rdparty|templates|data)(?:$|/)'
         options: |
           return 404;
 
