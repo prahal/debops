@@ -2266,6 +2266,10 @@ owncloud__nginx__dependent_servers:
         options: |
           return 404;
 
+      - pattern: '~ ^/{{ owncloud__http_psk_subpath_end_slash }}(?:composer\.(?:json|lock)|package(?:-lock)?\.json|core/shipped\.json)$'
+        options: |
+          return 404;
+
       - pattern: '~ ^/{{ owncloud__http_psk_subpath_end_slash }}.*\.php(?:$|/)'
         options: |  # noqa jinja[spacing]
           # Ensure this block, which passes PHP files to the PHP process, is above the blocks
